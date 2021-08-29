@@ -111,13 +111,13 @@ export function activate(context: vscode.ExtensionContext) {
       codexURL,
       {
         prompt: prompt,
-        temperature: 0.9,
+        temperature: 0.2,
         max_tokens: 256,
         top_p: 1,
         frequency_penalty: 0,
         presence_penalty: 0,
         n: choices,
-        stop: ["\n}"],
+        stop: ["}"]
       },
       {
         headers: {
@@ -136,7 +136,7 @@ export function activate(context: vscode.ExtensionContext) {
     if (response.data["choices"].length === 0) {
       return [];
     }
-    return response.data["choices"].map((c: any) => c["text"]);
+    return response.data["choices"].map((c: any) => c["text"] + "}");
   }
 
   let disposable = vscode.commands.registerCommand(
