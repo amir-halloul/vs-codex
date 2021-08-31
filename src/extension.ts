@@ -1,8 +1,10 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import { AxiosError } from "axios";
+import { Console } from "console";
 import * as vscode from "vscode";
 import { CodexInlineCompletionItem } from "./CodexInlineCompletionItem";
+import { compileDocument } from './document_compiler/document-compiler';
 
 // Import axios
 const axios = require("axios");
@@ -60,6 +62,15 @@ export function activate(context: vscode.ExtensionContext) {
     const id = e.completionItem.trackingId;
   });
 
+  // Return an array of definitions from the document
+  async function generateBriefCode(editor: vscode.TextEditor)
+  {
+    // Use vscode commands to get a list of functions ranges
+    let doc = compileDocument(editor.document);
+    console.log(doc);
+    return [];
+  }
+
   async function explainCode(code: string): Promise<string> {
     if (code.length === 0) {
       vscode.window.showWarningMessage(
@@ -99,7 +110,7 @@ export function activate(context: vscode.ExtensionContext) {
     return response.data["choices"][0]["text"];
   }
 
-  async function completeCode(code: string, choices = 3): Promise<string[]> {
+  async function completeCode(code: string, choices = 1): Promise<string[]> {
     if (code.length < 5) {
       return [];
     }
@@ -159,7 +170,8 @@ export function activate(context: vscode.ExtensionContext) {
     async function () {
       const editor = vscode.window.activeTextEditor;
       if (editor) {
-        vscode.commands.executeCommand("editor.action.inlineSuggest.trigger");
+        await generateBriefCode(editor);
+        // vscode.commands.executeCommand("editor.action.inlineSuggest.trigger");
       }
     }
   );
