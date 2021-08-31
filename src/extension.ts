@@ -4,7 +4,7 @@ import { AxiosError } from "axios";
 import { Console } from "console";
 import * as vscode from "vscode";
 import { CodexInlineCompletionItem } from "./CodexInlineCompletionItem";
-import { compileDocument } from './document_compiler/document-compiler';
+import { simplifyDocument } from './simplified-document';
 
 // Import axios
 const axios = require("axios");
@@ -61,15 +61,6 @@ export function activate(context: vscode.ExtensionContext) {
   vscode.window.getInlineCompletionItemController(provider).onDidShowCompletionItem(e => {
     const id = e.completionItem.trackingId;
   });
-
-  // Return an array of definitions from the document
-  async function generateBriefCode(editor: vscode.TextEditor)
-  {
-    // Use vscode commands to get a list of functions ranges
-    let doc = compileDocument(editor.document);
-    console.log(doc);
-    return [];
-  }
 
   async function explainCode(code: string): Promise<string> {
     if (code.length === 0) {
@@ -170,11 +161,14 @@ export function activate(context: vscode.ExtensionContext) {
     async function () {
       const editor = vscode.window.activeTextEditor;
       if (editor) {
-        await generateBriefCode(editor);
+        //await generateBriefCode(editor);
         // vscode.commands.executeCommand("editor.action.inlineSuggest.trigger");
+        // VS code use provideDocumentSemanticTokens
+        simplifyDocument(editor.document, editor.selection.end);        
       }
     }
   );
+
 
   context.subscriptions.push(disposable);
   context.subscriptions.push(disposableComplete);
