@@ -46,24 +46,78 @@ export const getScopesAtPosition = async (document: vscode.TextDocument, positio
 };
 
 /**
- * returns a string containing code at the most reasonable scope that contains the given position
- * @param document 
- * @param position 
+ * Get the scope possibly containing the most relevant code from a list of symbols where the target code
+ * is in the last symbol of the array
  * @param scopes
  */
-export const getProbableScopeText = async (document: vscode.TextDocument, position: vscode.Position, scopes: vscode.DocumentSymbol[]): Promise<string | undefined> => {
+export const getProbableScope = (scopes: vscode.DocumentSymbol[]): vscode.DocumentSymbol | undefined => {
 
     if (!scopes || !scopes.length) {
         return undefined;
     }
 
+    let classLevel: vscode.DocumentSymbol | undefined = undefined;
+    let moduleLevel: vscode.DocumentSymbol | undefined = undefined;
+
     for (let i = scopes.length - 1; i >= 0; i--) {
         if (scopePriorities[0].indexOf(scopes[i].kind) !== -1) {
-            return document.getText(scopes[i].range);
+            return scopes[i];
+        }
+
+        if (!classLevel && scopePriorities[1].indexOf(scopes[i].kind) !== -1) {
+            classLevel = scopes[i];
+        }
+
+        if (!moduleLevel && scopePriorities[2].indexOf(scopes[i].kind) !== -1) {
+            moduleLevel = scopes[i];
+        }
+    }
+
+    return classLevel ?? moduleLevel;
+};
+
+/**
+ * Returns an array of scopes with the same nesting level as scope
+ * @param scopes 
+ * @param scope 
+ */
+export const getSameLevelScopes = (scopes: vscode.DocumentSymbol[], scope: vscode.DocumentSymbol | undefined): vscode.DocumentSymbol[] | undefined => {
+    if (!scopes || !scopes.length || !scope) {
+        return undefined;
+    }
+
+    for (let i = scopes.length - 1; i >= 0; i--) {
+        if (scopes[i] === scope) {
+            if (i === 0) {
+                return undefined;
+            }
+
+            return scopes[i - 1].children;
         }
     }
 
     return undefined;
+};
+
+/**
+ * Returns the signature of a given DocumentSymbol
+ * Example output: int Program.Add(int a, int b)
+ * @param scope 
+ */
+export const getSignatureFromScope = async (document: vscode.TextDocument, scope: vscode.DocumentSymbol | undefined, position: vscode.Position): Promise<string | undefined> => {
+    if (!scope) {
+        return undefined;
+    }
+    const data: vscode.Hover[]  = await vscode.commands.executeCommand<vscode.Hover[]>("vscode.executeHoverProvider", document.uri, position) ?? [];
+    data.forEach(hover => {
+        console.log("Content:");
+        hover.contents.forEach(c => {
+            let str: vscode.MarkdownString = c as vscode.MarkdownString;
+            console.log(str.value);
+        });
+        console.log("=============");
+    });
+    return "";
 };
 
 /**
@@ -80,10 +134,16 @@ export const simplifyDocument = async (document: vscode.TextDocument, position: 
         return undefined;
     }
 
-    const scopeText: string | undefined = await getProbableScopeText(document, position, scopes);
+    const scope: vscode.DocumentSymbol | undefined = getProbableScope(scopes);
+    const adjacentScopes: vscode.DocumentSymbol[] | undefined = getSameLevelScopes(scopes, scope);
 
-    console.log("Detected scope text: ");
-    console.log(scopeText);
+    /*console.log("Found scope:");
+    console.log(scope);
+    console.log(adjacentScopes);*/
+
+    // Get the signatures of all symbols in the document
+    const signature = await getSignatureFromScope(document, scope, position);
+    /*console.log(signature);*/
 
     return undefined;
 }
