@@ -17,7 +17,6 @@ export const getScopesAtPosition = async (document: vscode.TextDocument, positio
     // Extract document symbols
     const symbols: vscode.DocumentSymbol[] = await vscode.commands.executeCommand<vscode.DocumentSymbol[]>("vscode.executeDocumentSymbolProvider", document.uri) ?? [];
 
-    console.log(symbols);
     // Find the symbol at the cursor position
     let rootSymbol: vscode.DocumentSymbol | undefined = symbols.find(symbol => {
         return symbol.range.contains(position);
@@ -92,7 +91,7 @@ export const getSameLevelScopes = (scopes: vscode.DocumentSymbol[], scope: vscod
                 return undefined;
             }
 
-            return scopes[i - 1].children;
+            return scopes[i - 1].children.filter(s => s !== scope);
         }
     }
 
@@ -101,23 +100,34 @@ export const getSameLevelScopes = (scopes: vscode.DocumentSymbol[], scope: vscod
 
 /**
  * Returns the signature of a given DocumentSymbol
- * Example output: int Program.Add(int a, int b)
  * @param scope 
  */
-export const getSignatureFromScope = async (document: vscode.TextDocument, scope: vscode.DocumentSymbol | undefined, position: vscode.Position): Promise<string | undefined> => {
+export const getSignatureFromScope = async (document: vscode.TextDocument, scope: vscode.DocumentSymbol | undefined): Promise<string | undefined> => {
     if (!scope) {
         return undefined;
     }
-    const data: vscode.Hover[]  = await vscode.commands.executeCommand<vscode.Hover[]>("vscode.executeHoverProvider", document.uri, position) ?? [];
-    data.forEach(hover => {
-        console.log("Content:");
-        hover.contents.forEach(c => {
-            let str: vscode.MarkdownString = c as vscode.MarkdownString;
-            console.log(str.value);
-        });
-        console.log("=============");
+    const hoverData: vscode.Hover[] = await vscode.commands.executeCommand<vscode.Hover[]>("vscode.executeHoverProvider", document.uri, scope?.selectionRange.start.translate(0, 1)) ?? [];
+    const hoverDataText = hoverData.map(data => {
+        let text = undefined;
+        for (let c of data.contents) {
+            text = (c as vscode.MarkdownString).value.trim();
+            if (text.startsWith('```' + document.languageId)) {
+                break;
+            }
+        }
+        const signatureParts: string[] = text?.split("\n") ?? [];
+        
+        if (signatureParts.length < 2) {
+            return undefined;
+        }
+        return signatureParts[1].replace('(loading...)', '').trim();
     });
-    return "";
+
+    if (!hoverDataText || !hoverDataText.length) {
+        return undefined;
+    }
+
+    return hoverDataText[0];
 };
 
 /**
@@ -135,15 +145,21 @@ export const simplifyDocument = async (document: vscode.TextDocument, position: 
     }
 
     const scope: vscode.DocumentSymbol | undefined = getProbableScope(scopes);
-    const adjacentScopes: vscode.DocumentSymbol[] | undefined = getSameLevelScopes(scopes, scope);
+    const adjacentScopes: vscode.DocumentSymbol[] = getSameLevelScopes(scopes, scope) ?? [];
 
-    /*console.log("Found scope:");
-    console.log(scope);
-    console.log(adjacentScopes);*/
+    let simplified = "";
 
-    // Get the signatures of all symbols in the document
-    const signature = await getSignatureFromScope(document, scope, position);
-    /*console.log(signature);*/
+    for (let adjScope of adjacentScopes) {
+        const signature = await getSignatureFromScope(document, adjScope);
+        if (!signature || !signature.length) {
+            continue;
+        }
+        simplified += signature + "\n";
+    }
 
-    return undefined;
-}
+    simplified += "\n";
+
+    simplified += document.getText(new vscode.Range(scope?.range.start ?? new vscode.Position(position.line, 0), position));
+
+    return simplified;
+};

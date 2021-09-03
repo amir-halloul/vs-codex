@@ -164,7 +164,8 @@ export function activate(context: vscode.ExtensionContext) {
         //await generateBriefCode(editor);
         // vscode.commands.executeCommand("editor.action.inlineSuggest.trigger");
         // VS code use provideDocumentSemanticTokens
-        simplifyDocument(editor.document, editor.selection.end);        
+        const simplifiedDoc = await simplifyDocument(editor.document, editor.selection.end); 
+        console.log(simplifiedDoc);      
       }
     }
   );
