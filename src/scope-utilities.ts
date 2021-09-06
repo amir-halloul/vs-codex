@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 
-const scopePriorities: { [priority: number]: vscode.SymbolKind[] } = {
+export const scopeCategories: { [priority: number]: vscode.SymbolKind[] } = {
     0: [vscode.SymbolKind.Method, vscode.SymbolKind.Function, vscode.SymbolKind.Constructor, vscode.SymbolKind.Enum],
     1: [vscode.SymbolKind.Class, vscode.SymbolKind.Interface, vscode.SymbolKind.Struct],
     2: [vscode.SymbolKind.Module, vscode.SymbolKind.Package, vscode.SymbolKind.Namespace]
@@ -16,7 +16,6 @@ export const getScopesAtPosition = async (document: vscode.TextDocument, positio
 
     // Extract document symbols
     const symbols: vscode.DocumentSymbol[] = await vscode.commands.executeCommand<vscode.DocumentSymbol[]>("vscode.executeDocumentSymbolProvider", document.uri) ?? [];
-
     // Find the symbol at the cursor position
     let rootSymbol: vscode.DocumentSymbol | undefined = symbols.find(symbol => {
         return symbol.range.contains(position);
@@ -59,15 +58,15 @@ export const getProbableScope = (scopes: vscode.DocumentSymbol[]): vscode.Docume
     let moduleLevel: vscode.DocumentSymbol | undefined = undefined;
 
     for (let i = scopes.length - 1; i >= 0; i--) {
-        if (scopePriorities[0].indexOf(scopes[i].kind) !== -1) {
+        if (scopeCategories[0].indexOf(scopes[i].kind) !== -1) {
             return scopes[i];
         }
 
-        if (!classLevel && scopePriorities[1].indexOf(scopes[i].kind) !== -1) {
+        if (!classLevel && scopeCategories[1].indexOf(scopes[i].kind) !== -1) {
             classLevel = scopes[i];
         }
 
-        if (!moduleLevel && scopePriorities[2].indexOf(scopes[i].kind) !== -1) {
+        if (!moduleLevel && scopeCategories[2].indexOf(scopes[i].kind) !== -1) {
             moduleLevel = scopes[i];
         }
     }
@@ -128,38 +127,4 @@ export const getSignatureFromScope = async (document: vscode.TextDocument, scope
     }
 
     return hoverDataText[0];
-};
-
-/**
- * Simplifies a document around a given position 
- * @param document 
- * @param position 
- * @returns 
- */
-export const simplifyDocument = async (document: vscode.TextDocument, position: vscode.Position): Promise<string | undefined> => {
-
-    const scopes: vscode.DocumentSymbol[] | undefined = await getScopesAtPosition(document, position);
-
-    if (!scopes || !scopes.length) {
-        return undefined;
-    }
-
-    const scope: vscode.DocumentSymbol | undefined = getProbableScope(scopes);
-    const adjacentScopes: vscode.DocumentSymbol[] = getSameLevelScopes(scopes, scope) ?? [];
-
-    let simplified = "";
-
-    for (let adjScope of adjacentScopes) {
-        const signature = await getSignatureFromScope(document, adjScope);
-        if (!signature || !signature.length) {
-            continue;
-        }
-        simplified += signature + "\n";
-    }
-
-    simplified += "\n";
-
-    simplified += document.getText(new vscode.Range(scope?.range.start ?? new vscode.Position(position.line, 0), position));
-
-    return simplified;
 };

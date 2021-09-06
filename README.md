@@ -1,20 +1,16 @@
 # vs-codex README
 
-VS Codex
+VS Codex AI generated auto-completions
 
 ## Features
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
-
-For example if there is an image subfolder under your extension project workspace:
-
-\!\[feature X\]\(images/feature-x.png\)
-
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+* Autocompletes your code in most programming languages.
+* You can select which part of your code to send as a prompt.
+* Smart prompt generation for javascript, typescript, c/c++, C#, java and python.
 
 ## Requirements
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+Requires an OpenAI API key with access to the Codex model.
 
 ## Extension Settings
 

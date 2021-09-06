@@ -1,20 +1,13 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
 import { AxiosError } from "axios";
-import { Console } from "console";
 import * as vscode from "vscode";
+import { CodexPrompt } from "./codex-models";
 import { CodexInlineCompletionItem } from "./CodexInlineCompletionItem";
-import { simplifyDocument } from './simplified-document';
+import { generatePrompt } from "./prompt-utilities";
 
 // Import axios
 const axios = require("axios");
 
-// this method is called when your extension is activated
-// your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
-  // Use the console to output diagnostic information (console.log) and errors (console.error)
-  // This line of code will only be executed once when your extension is activated
-  console.log("vs-codex ON");
 
   const provider: vscode.InlineCompletionItemProvider<CodexInlineCompletionItem> =
   {
@@ -25,31 +18,38 @@ export function activate(context: vscode.ExtensionContext) {
       token
     ) => {
 
+      // Only autocomplete when explicitly requested to reduce model usage
       if (context.triggerKind !== vscode.InlineCompletionTriggerKind.Explicit) {
         return [];
       }
 
-      const textBeforeCursor = document.getText(
-        new vscode.Range(position.with(0, 0), position)
-      );
-
-      const textBeforeCursorSameline = document.getText(
+      // Get the text on the same line where the autocompletion was requested
+      const autoCompletionLine = document.getText(
         new vscode.Range(position.with(undefined, 0), position)
       );
 
       const suggestions: CodexInlineCompletionItem[] = [];
 
-      const completions = await completeCode(textBeforeCursor);
+      // Generate the appropriate prompt
+      const prompt = await generatePrompt(document, vscode.window.activeTextEditor?.selections ?? []);
+
+      console.log("Creating file");
+      // Create a virtual document containing the prompt data and display it
+      const vdoc = await vscode.workspace.openTextDocument(
+        {
+          language: "text",
+          content: "Prompt:\n" + prompt.prompt
+        });
+
+      const completions = await completeCode(prompt);
 
       for (let i = 0; i < completions.length; i++) {
         suggestions.push({
-          text: textBeforeCursorSameline + completions[i],
+          text: autoCompletionLine + completions[i],
           trackingId: `Completion ${i}`,
           range: new vscode.Range(position.with(undefined, 0), position)
         });
       }
-
-      console.log(suggestions);
 
       return suggestions;
     },
@@ -101,25 +101,27 @@ export function activate(context: vscode.ExtensionContext) {
     return response.data["choices"][0]["text"];
   }
 
-  async function completeCode(code: string, choices = 1): Promise<string[]> {
-    if (code.length < 5) {
+  async function completeCode(prompt: CodexPrompt, choices = 1): Promise<string[]> {
+    if (prompt.prompt.length < 5) {
+      vscode.window.showErrorMessage("The sample code is too short to give anything meaningful!");
       return [];
     }
 
+    vscode.window.showInformationMessage("Generating code completion...");
+
     const codexURL =
       "https://api.openai.com/v1/engines/davinci-codex/completions";
-    const prompt = "// Complete the code below:\r\n" + code;
     let response = await axios.post(
       codexURL,
       {
-        prompt: prompt,
+        prompt: prompt.prompt,
         temperature: 0.2,
         max_tokens: 256,
         top_p: 1,
         frequency_penalty: 0,
         presence_penalty: 0,
         n: choices,
-        stop: ["}"]
+        stop: prompt.stopSequences
       },
       {
         headers: {
@@ -136,9 +138,10 @@ export function activate(context: vscode.ExtensionContext) {
       vscode.window.showErrorMessage("Unexpected error occured while generating suggestions");
     });
     if (response.data["choices"].length === 0) {
+      vscode.window.showErrorMessage("Could not generate code completion.");
       return [];
     }
-    return response.data["choices"].map((c: any) => c["text"] + "}");
+    return response.data["choices"].map((c: any) => c["text"]);
   }
 
   let disposable = vscode.commands.registerCommand(
@@ -161,11 +164,7 @@ export function activate(context: vscode.ExtensionContext) {
     async function () {
       const editor = vscode.window.activeTextEditor;
       if (editor) {
-        //await generateBriefCode(editor);
-        // vscode.commands.executeCommand("editor.action.inlineSuggest.trigger");
-        // VS code use provideDocumentSemanticTokens
-        const simplifiedDoc = await simplifyDocument(editor.document, editor.selection.end); 
-        console.log(simplifiedDoc);      
+        vscode.commands.executeCommand("editor.action.inlineSuggest.trigger");
       }
     }
   );
