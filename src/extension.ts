@@ -9,6 +9,12 @@ const axios = require("axios");
 
 export function activate(context: vscode.ExtensionContext) {
 
+  // Status Bar Item
+  let completionTypeStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 1000);
+	completionTypeStatusBarItem.command = "vs-codex.change-completion-type";
+  updateCompletionTypeStatusBarItem();
+
+  // Inline Completions Provider
   const provider: vscode.InlineCompletionItemProvider<CodexInlineCompletionItem> =
   {
     provideInlineCompletionItems: async (
@@ -56,11 +62,10 @@ export function activate(context: vscode.ExtensionContext) {
   };
 
   vscode.languages.registerInlineCompletionItemProvider({ pattern: "**" }, provider);
-
-  // Be aware that the API around `getInlineCompletionItemController` will not be finalized as is!
   vscode.window.getInlineCompletionItemController(provider).onDidShowCompletionItem(e => {
     const id = e.completionItem.trackingId;
   });
+
 
   async function explainCode(code: string): Promise<string> {
     if (code.length === 0) {
@@ -144,6 +149,8 @@ export function activate(context: vscode.ExtensionContext) {
     return response.data["choices"].map((c: any) => c["text"]);
   }
 
+
+  // Commands
   let disposable = vscode.commands.registerCommand(
     "vs-codex.explain",
     async function () {
@@ -169,9 +176,29 @@ export function activate(context: vscode.ExtensionContext) {
     }
   );
 
+  let disposableChangeCompletionType = vscode.commands.registerCommand(
+    "vs-codex.change-completion-type",
+    async function () {
+      let choice = await vscode.window.showQuickPick(["Line", "Function", "File"],
+        { placeHolder: "Select completion type:" });
+      if (choice) {
+        context.globalState.update("COMPLETION-TYPE", choice);
+        updateCompletionTypeStatusBarItem();
+      }
+    }
+  );
 
   context.subscriptions.push(disposable);
   context.subscriptions.push(disposableComplete);
+  context.subscriptions.push(disposableChangeCompletionType);
+  context.subscriptions.push(completionTypeStatusBarItem);
+
+  function updateCompletionTypeStatusBarItem(): void {
+    const completionType = context.globalState.get<string>("COMPLETION-TYPE");
+    completionTypeStatusBarItem.name = `$(megaphone) Completion type: ${completionType}`;
+    completionTypeStatusBarItem.show();
+    console.log("Showing bar: " + completionTypeStatusBarItem.name);
+  }
 }
 
 // this method is called when your extension is deactivated

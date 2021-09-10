@@ -19,11 +19,15 @@
 		"commands": [
 			{
 				"command": "vs-codex.explain",
-				"title": "VS Codex Explain"
+				"title": "VS Codex: Explain selected code"
 			},
 			{
 				"command": "vs-codex.complete",
-				"title": "VS Codex Complete"
+				"title": "VS Codex: Complete code after cursor"
+			},
+			{
+				"command": "vs-codex.change-completion-type",
+				"title": "VS Codex: Change completion type"
 			}
 		],
 		"keybindings": [
@@ -38,8 +42,21 @@
 				"general.openaiKey": {
 					"type": "string",
 					"default": "secret key",
-					"scope": "application",
 					"description": "Open AI secret key"
+				},
+				"general.maxTokens": {
+					"type": "number",
+					"default": 256,
+					"minimum": 64,
+					"maximum": 1024,
+					"description": "Maximum number of tokens the GPT model can generate"
+				},
+				"completions.promptSize": {
+					"type": "number",
+					"default": 1024,
+					"minimum": 128,
+					"maximum": 2048,
+					"description": "If smart sampling is not available, this number is use to generate a simple prompt"
 				}
 			}
 		}
