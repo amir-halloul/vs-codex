@@ -10,7 +10,8 @@ const axios = require("axios");
 export function activate(context: vscode.ExtensionContext) {
 
   // Status Bar Item
-  let completionTypeStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 1000);
+  let completionTypeStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
+  completionTypeStatusBarItem.name = `VS Codex Completion Type`;
 	completionTypeStatusBarItem.command = "vs-codex.change-completion-type";
   updateCompletionTypeStatusBarItem();
 
@@ -38,14 +39,6 @@ export function activate(context: vscode.ExtensionContext) {
 
       // Generate the appropriate prompt
       const prompt = await generatePrompt(document, vscode.window.activeTextEditor?.selections ?? []);
-
-      console.log("Creating file");
-      // Create a virtual document containing the prompt data and display it
-      const vdoc = await vscode.workspace.openTextDocument(
-        {
-          language: "text",
-          content: "Prompt:\n" + prompt.prompt
-        });
 
       const completions = await completeCode(prompt);
 
@@ -194,12 +187,10 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(completionTypeStatusBarItem);
 
   function updateCompletionTypeStatusBarItem(): void {
-    const completionType = context.globalState.get<string>("COMPLETION-TYPE");
-    completionTypeStatusBarItem.name = `$(megaphone) Completion type: ${completionType}`;
+    const completionType = context.globalState.get<string>("COMPLETION-TYPE");   
+    completionTypeStatusBarItem.text = `Completion type: ${completionType}`;
     completionTypeStatusBarItem.show();
-    console.log("Showing bar: " + completionTypeStatusBarItem.name);
   }
 }
 
-// this method is called when your extension is deactivated
 export function deactivate() { }
