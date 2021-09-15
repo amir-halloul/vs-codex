@@ -1,11 +1,11 @@
 export enum CodexModel {
-    Davinci,
-    Cushman
+    davinci = "Davinci",
+    cushman = "Cushman"
 };
 
 export class CodexConfig {
     model: CodexModel;
-    responseLength: number;
+    choices: number;
     temperature: number;
     topP: number;
     frequencyPenalty: number;
@@ -15,7 +15,7 @@ export class CodexConfig {
 
     constructor(model: CodexModel, responseLength: number, temperature: number, topP: number, frequencyPenalty: number, presencePenalty: number, bestOf: number, maxTokens: number) {
         this.model = model;
-        this.responseLength = responseLength;
+        this.choices = responseLength;
         this.temperature = temperature;
         this.topP = topP;
         this.frequencyPenalty = frequencyPenalty;

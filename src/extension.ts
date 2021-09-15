@@ -1,19 +1,17 @@
-import { AxiosError } from "axios";
 import * as vscode from "vscode";
-import { CodexPrompt } from "./codex-models";
-import { CodexInlineCompletionItem } from "./CodexInlineCompletionItem";
-import { generatePrompt } from "./prompt-utilities";
+import { CodexConfig, CodexModel, CodexPrompt } from "./models/codex-models";
+import { CodexInlineCompletionItem } from "./models/codex-inline-completion-item-model";
+import { generatePrompt } from "./utilities/prompt-utilities";
+import { CompletionType, getCodexModel, getCompletionType, setCodexModel, setCompletionType } from "./global-state-manager";
+import { predictNext } from "./openai-api";
 
-// Import axios
-const axios = require("axios");
-
-export function activate(context: vscode.ExtensionContext) {
+export function activate(extensionContext: vscode.ExtensionContext) {
 
   // Status Bar Item
-  let completionTypeStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
-  completionTypeStatusBarItem.name = `VS Codex Completion Type`;
-	completionTypeStatusBarItem.command = "vs-codex.change-completion-type";
-  updateCompletionTypeStatusBarItem();
+  let codexStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
+  codexStatusBarItem.name = `VS Codex`;
+  codexStatusBarItem.command = "vs-codex.change-completion-type";
+  updateCodexStatusBarItem();
 
   // Inline Completions Provider
   const provider: vscode.InlineCompletionItemProvider<CodexInlineCompletionItem> =
@@ -38,9 +36,13 @@ export function activate(context: vscode.ExtensionContext) {
       const suggestions: CodexInlineCompletionItem[] = [];
 
       // Generate the appropriate prompt
-      const prompt = await generatePrompt(document, vscode.window.activeTextEditor?.selections ?? []);
+      const prompt = await generatePrompt(document, vscode.window.activeTextEditor?.selections ?? [], getCompletionType(extensionContext));
 
       const completions = await completeCode(prompt);
+
+      if (!completions || !completions.length) {
+        return undefined;
+      }
 
       for (let i = 0; i < completions.length; i++) {
         suggestions.push({
@@ -61,45 +63,11 @@ export function activate(context: vscode.ExtensionContext) {
 
 
   async function explainCode(code: string): Promise<string> {
-    if (code.length === 0) {
-      vscode.window.showWarningMessage(
-        "You must select the section of your code you want explained!"
-      );
-      return "";
-    }
-
-    const codexUrl =
-      "https://api.openai.com/v1/engines/davinci-codex/completions";
-    const prompt = code + "\n/* Clear and brief explanation of the code above:";
-    console.log(prompt);
-    let response = await axios.post(
-      codexUrl,
-      {
-        prompt: prompt,
-        temperature: 0.9,
-        max_tokens: 256,
-        top_p: 1,
-        frequency_penalty: 0.2,
-        presence_penalty: 0,
-        stop: ["*/"],
-      },
-      {
-        headers: {
-          Authorization:
-            "Bearer " +
-            vscode.workspace.getConfiguration("general").get("openaiKey"),
-        },
-      }
-    );
-
-    if (response.data["choices"].length === 0) {
-      vscode.window.showWarningMessage("No code returned by the server.");
-      return "";
-    }
-    return response.data["choices"][0]["text"];
+    vscode.window.showWarningMessage("This feature is not yet developed");
+    return "";
   }
 
-  async function completeCode(prompt: CodexPrompt, choices = 1): Promise<string[]> {
+  async function completeCode(prompt: CodexPrompt, choices = 1): Promise<string[] | undefined> {
     if (prompt.prompt.length < 5) {
       vscode.window.showErrorMessage("The sample code is too short to give anything meaningful!");
       return [];
@@ -107,39 +75,24 @@ export function activate(context: vscode.ExtensionContext) {
 
     vscode.window.showInformationMessage("Generating code completion...");
 
-    const codexURL =
-      "https://api.openai.com/v1/engines/davinci-codex/completions";
-    let response = await axios.post(
-      codexURL,
-      {
-        prompt: prompt.prompt,
-        temperature: 0.2,
-        max_tokens: 256,
-        top_p: 1,
-        frequency_penalty: 0,
-        presence_penalty: 0,
-        n: choices,
-        stop: prompt.stopSequences
-      },
-      {
-        headers: {
-          Authorization:
-            "Bearer " +
-            vscode.workspace.getConfiguration("general").get("openaiKey"),
-        },
-      }
-    ).catch((error: AxiosError | Error) => {
-      if (axios.isAxiosError(error)) {
-        vscode.window.showErrorMessage("Authorization error occured while generating suggestions.\nMake sure you set your OpenAI API key in the configurations.")
-        return;
-      }
-      vscode.window.showErrorMessage("Unexpected error occured while generating suggestions");
-    });
-    if (response.data["choices"].length === 0) {
+    const config: CodexConfig = {
+      model: getCodexModel(extensionContext),
+      temperature: 0.2,
+      maxTokens: vscode.workspace.getConfiguration("general").get<number>("maxTokens") ?? 256,
+      topP: 1,
+      frequencyPenalty: 0,
+      presencePenalty: 0,
+      bestOf: 1,
+      choices
+    };
+
+    const completions = await predictNext(prompt, config, vscode.workspace.getConfiguration("general").get("openaiKey") ?? "");
+
+    if (!completions || !completions.length) {
       vscode.window.showErrorMessage("Could not generate code completion.");
-      return [];
     }
-    return response.data["choices"].map((c: any) => c["text"]);
+
+    return completions;
   }
 
 
@@ -172,24 +125,38 @@ export function activate(context: vscode.ExtensionContext) {
   let disposableChangeCompletionType = vscode.commands.registerCommand(
     "vs-codex.change-completion-type",
     async function () {
-      let choice = await vscode.window.showQuickPick(["Line", "Function", "File"],
-        { placeHolder: "Select completion type:" });
+      let choice: string = await vscode.window.showQuickPick(Object.values(CompletionType),
+        { placeHolder: "Select completion type:" }) ?? CompletionType.line;
       if (choice) {
-        context.globalState.update("COMPLETION-TYPE", choice);
-        updateCompletionTypeStatusBarItem();
+        setCompletionType(extensionContext, <CompletionType>choice);
+        updateCodexStatusBarItem();
       }
     }
   );
 
-  context.subscriptions.push(disposable);
-  context.subscriptions.push(disposableComplete);
-  context.subscriptions.push(disposableChangeCompletionType);
-  context.subscriptions.push(completionTypeStatusBarItem);
+  let disposableChangeModelType = vscode.commands.registerCommand(
+    "vs-codex.change-model-type",
+    async function () {
+      let choice: string = await vscode.window.showQuickPick(Object.values(CodexModel),
+        { placeHolder: "Select Codex model:" }) ?? CodexModel.davinci;
+      if (choice) {
+        setCodexModel(extensionContext, <CodexModel>choice);
+        updateCodexStatusBarItem();
+      }
+    }
+  );
 
-  function updateCompletionTypeStatusBarItem(): void {
-    const completionType = context.globalState.get<string>("COMPLETION-TYPE");   
-    completionTypeStatusBarItem.text = `Completion type: ${completionType}`;
-    completionTypeStatusBarItem.show();
+  extensionContext.subscriptions.push(disposable);
+  extensionContext.subscriptions.push(disposableComplete);
+  extensionContext.subscriptions.push(disposableChangeCompletionType);
+  extensionContext.subscriptions.push(codexStatusBarItem);
+  extensionContext.subscriptions.push(disposableChangeModelType);
+
+  function updateCodexStatusBarItem(): void {
+    const completionType = getCompletionType(extensionContext);
+    const modelType = getCodexModel(extensionContext);
+    codexStatusBarItem.text = `VS Codex ${modelType}: ${completionType}`;
+    codexStatusBarItem.show();
   }
 }
 

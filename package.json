@@ -28,6 +28,10 @@
 			{
 				"command": "vs-codex.change-completion-type",
 				"title": "VS Codex: Change completion type"
+			},
+			{
+				"command": "vs-codex.change-model-type",
+				"title": "VS Codex: Change Codex model type"
 			}
 		],
 		"keybindings": [

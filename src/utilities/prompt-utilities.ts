@@ -1,14 +1,27 @@
 import * as vscode from 'vscode';
-import { CodexPrompt } from './codex-models';
-import { isLanguageSupported, languageMultiLineComments, languageScopeEnd } from './language-utilities';
+import { CompletionType } from '../global-state-manager';
+import { CodexPrompt } from '../models/codex-models';
+import { isLanguageSupported, languageScopeEnd } from './language-utilities';
 import { getProbableScope, getSameLevelScopes, getScopesAtPosition, getSignatureFromScope, scopeCategories } from './scope-utilities';
 
-export const generateSimplePrompt = (document: vscode.TextDocument, position: vscode.Position, maxLength: number = 2048): CodexPrompt => {
-    // TODO: dynamically generate stop sequence based on the scope and language
-    let stopSequences = [...languageMultiLineComments[document.languageId], ...languageScopeEnd[document.languageId]];
-    if (!stopSequences.length) {
-        stopSequences = ["}", "end", "/*", "'''"];
+// TODO: needs to be improved
+export const generateStopSequence = (languageId: string, completionType: CompletionType): string[] => {
+    switch (completionType) {
+        case CompletionType.line:
+            return ['\n'];
+        case CompletionType.scope:
+            if (!isLanguageSupported(languageId)) {
+                return ["}", ">", "]", "end"];
+            }
+            return languageScopeEnd[languageId];
+        case CompletionType.unrestricted:
+            return [];
     }
+};
+
+export const generateSimplePrompt = (document: vscode.TextDocument, position: vscode.Position, completionType: CompletionType, maxLength: number = 2048): CodexPrompt => {
+
+    let stopSequences = generateStopSequence(document.languageId, completionType);
 
     // Add the line containing the cursor position
     let code = document.getText(new vscode.Range(new vscode.Position(position.line, 0), position));
@@ -24,13 +37,10 @@ export const generateSimplePrompt = (document: vscode.TextDocument, position: vs
     return { prompt: code, stopSequences };
 };
 
-export const generatePrompt = async (document: vscode.TextDocument, selections: vscode.Selection[]): Promise<CodexPrompt> => {
+// TODO: needs more research
+export const generatePrompt = async (document: vscode.TextDocument, selections: vscode.Selection[], completionType: CompletionType): Promise<CodexPrompt> => {
 
-    // TODO: dynamically generate stop sequence based on the scope and language
-    let stopSequences = [...languageMultiLineComments[document.languageId], ...languageScopeEnd[document.languageId]];
-    if (!stopSequences.length) {
-        stopSequences = ["}", "end", "/*", "'''"];
-    }
+    let stopSequences = generateStopSequence(document.languageId, completionType);
 
     let prompt = "";
 
@@ -48,19 +58,19 @@ export const generatePrompt = async (document: vscode.TextDocument, selections: 
     } else {
 
         if (!isLanguageSupported(document.languageId)) {
-            return generateSimplePrompt(document, selections[0].end);
+            return generateSimplePrompt(document, selections[0].end, completionType);
         }
 
         // Generate simplified code prompt
         const scopes: vscode.DocumentSymbol[] | undefined = await getScopesAtPosition(document, selections[0].end);
 
         if (!scopes || !scopes.length) {
-            return generateSimplePrompt(document, selections[0].end);
+            return generateSimplePrompt(document, selections[0].end, completionType);
         }
 
         const scope: vscode.DocumentSymbol | undefined = getProbableScope(scopes);
         if (!scope) {
-            return generateSimplePrompt(document, selections[0].end);
+            return generateSimplePrompt(document, selections[0].end, completionType);
         }
 
         if (scopeCategories[0].indexOf(scope.kind) !== -1) {
@@ -82,7 +92,7 @@ export const generatePrompt = async (document: vscode.TextDocument, selections: 
             prompt += document.getText(new vscode.Range(scope?.range.start ?? new vscode.Position(selections[0].end.line, 0), selections[0].end));
 
         } else {
-            return generateSimplePrompt(document, selections[0].end);
+            return generateSimplePrompt(document, selections[0].end, completionType);
         }
     }
 
