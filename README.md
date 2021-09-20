@@ -20,3 +20,6 @@ VS Codex AI generated auto-completions
 4. Install from VSIX.
 
 ![alt text](./images/install.JPG "How to install")
+
+5. To start vs code use ```code-insiders . --enable-proposed-api=fuse-gaming.vs-codex```
+6. Finally add your OpenAI api key to the configuration.
