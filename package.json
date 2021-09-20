@@ -1,5 +1,6 @@
 {
 	"enableProposedApi": true,
+	"repository": "https://github.com/TheFuseGamer/vs-codex",
 	"name": "vs-codex",
 	"displayName": "VS Codex",
 	"description": "OpentAI Codex auto-completion for VS Code",
