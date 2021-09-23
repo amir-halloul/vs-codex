@@ -62,6 +62,48 @@
 					"minimum": 128,
 					"maximum": 2048,
 					"description": "If smart sampling is not available, this number is use to generate a simple prompt"
+				},
+				"model.temperature": {
+					"type": "number",
+					"default": 0.2,
+					"minimum": 0,
+					"maximum": 1,
+					"description": "Higher values means the model will take more risks. Try 0.9 for more creative applications, and 0 (argmax sampling) for ones with a well-defined answer."
+				},
+				"model.topP": {
+					"type": "number",
+					"default": 1,
+					"minimum": 0,
+					"maximum": 1,
+					"description": "An alternative to sampling with temperature, called nucleus sampling, where the model considers the results of the tokens with top_p probability mass. So 0.1 means only the tokens comprising the top 10% probability mass are considered."
+				},
+				"model.n": {
+					"type": "number",
+					"default": 1,
+					"minimum": 1,
+					"maximum": 10,
+					"description": "How many completions to generate for each prompt. (More predictions = more expensive)"
+				},
+				"model.frequencyPenalty": {
+					"type": "number",
+					"default": 0,
+					"minimum": -2,
+					"maximum": 2,
+					"description": "Number between -2.0 and 2.0. Positive values penalize new tokens based on whether they appear in the text so far, increasing the model's likelihood to talk about new topics."
+				},
+				"model.presencePenalty": {
+					"type": "number",
+					"default": 0,
+					"minimum": -2,
+					"maximum": 2,
+					"description": "Number between -2.0 and 2.0. Positive values penalize new tokens based on their existing frequency in the text so far, decreasing the model's likelihood to repeat the same line verbatim."
+				},
+				"model.bestOf": {
+					"type": "number",
+					"default": 1,
+					"minimum": 1,
+					"maximum": 10,
+					"description": "Generates best_of completions server-side and returns the \"best\" (the one with the lowest log probability per token). Results cannot be streamed. (More predictions = more expensive)"
 				}
 			}
 		}

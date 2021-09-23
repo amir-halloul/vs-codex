@@ -38,7 +38,7 @@ export function activate(extensionContext: vscode.ExtensionContext) {
       // Generate the appropriate prompt
       const prompt = await generatePrompt(document, vscode.window.activeTextEditor?.selections ?? [], getCompletionType(extensionContext));
 
-      const completions = await completeCode(prompt);
+      const completions = await completeCode(prompt, vscode.workspace.getConfiguration("model").get<number>("n") ?? 1);
 
       if (!completions || !completions.length) {
         return undefined;
@@ -75,14 +75,15 @@ export function activate(extensionContext: vscode.ExtensionContext) {
 
     vscode.window.showInformationMessage("Generating code completion...");
 
+    // TODO: Create a configuration utility
     const config: CodexConfig = {
       model: getCodexModel(extensionContext),
-      temperature: 0.2,
+      temperature: vscode.workspace.getConfiguration("model").get<number>("temperature") ?? 0.2,
       maxTokens: vscode.workspace.getConfiguration("general").get<number>("maxTokens") ?? 256,
-      topP: 1,
-      frequencyPenalty: 0,
-      presencePenalty: 0,
-      bestOf: 1,
+      topP: vscode.workspace.getConfiguration("model").get<number>("topP") ?? 0.2,
+      frequencyPenalty: vscode.workspace.getConfiguration("model").get<number>("frequencyPenalty") ?? 0,
+      presencePenalty: vscode.workspace.getConfiguration("model").get<number>("presencePenalty") ?? 0,
+      bestOf: vscode.workspace.getConfiguration("model").get<number>("bestOf") ?? 1,
       choices
     };
 
