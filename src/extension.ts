@@ -1,4 +1,6 @@
 import * as vscode from "vscode";
+import * as path from 'path';
+import * as fs from 'fs';
 import { CodexConfig, CodexModel, CodexPrompt } from "./models/codex-models";
 import { CodexInlineCompletionItem } from "./models/codex-inline-completion-item-model";
 import { generatePrompt } from "./utilities/prompt-utilities";
@@ -146,11 +148,28 @@ export function activate(extensionContext: vscode.ExtensionContext) {
     }
   );
 
+  let disposableChat = vscode.commands.registerCommand(
+    "vs-codex.chat",
+    async function () {
+      let webview = vscode.window.createWebviewPanel(
+          'webview',
+          'VS-Codex Chatbot',
+          vscode.ViewColumn.One,
+          { enableScripts: true }
+      );
+
+      // Set the webview's HTML content
+      const filePath: vscode.Uri = vscode.Uri.file(path.join(extensionContext.extensionPath, 'src', 'web_chat', 'chat.html'));
+      webview.webview.html = fs.readFileSync(filePath.fsPath, 'utf8');
+    }
+  );
+
   extensionContext.subscriptions.push(disposable);
   extensionContext.subscriptions.push(disposableComplete);
   extensionContext.subscriptions.push(disposableChangeCompletionType);
   extensionContext.subscriptions.push(codexStatusBarItem);
   extensionContext.subscriptions.push(disposableChangeModelType);
+  extensionContext.subscriptions.push(disposableChat);
 
   function updateCodexStatusBarItem(): void {
     const completionType = getCompletionType(extensionContext);

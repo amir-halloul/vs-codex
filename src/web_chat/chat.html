@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap" rel="stylesheet">
+    <title>Document</title>
+    <style>
+        .chat-container {
+            position: absolute;
+            top: 0px;
+            right: 0px;
+            bottom: 0px;
+            left: 0px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .title {
+            margin-top: 50px;
+            margin-bottom: 10px;
+            text-align: center;
+            font-size: large;
+            font-family: 'Roboto Mono', monospace;
+        }
+
+        .chat-body {
+            background-color: rgb(61, 61, 61);
+            width: 25%;
+            height: 60%;
+            margin-left: auto;
+            margin-right: auto;
+            padding: 10px 5px;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+
+        .chat-box {
+            width: calc(25% + 10px);
+            margin-left: auto;
+            margin-right: auto;
+            background-color: rgb(61, 61, 61);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="chat-container">
+        <div class="title">
+            VS-Codex Bot
+        </div>
+        <div class="chat-body">
+            <div class="chat-entry"><span style="font-weight: bold;">Bot:</span> Hello there!</div>
+            <div class="chat-entry"><span style="font-weight: bold;">You:</span> I need help</div>
+            <div class="chat-entry"><span style="font-weight: bold;">Bot:</span> Ok</div>
+            <div class="chat-entry"><span style="font-weight: bold;">You:</span> Cool</div>
+            <div class="chat-entry"><span style="font-weight: bold;">Bot:</span> Yep</div>
+            <div class="chat-entry"><span style="font-weight: bold;">You:</span> Thanks</div>
+        </div>
+        <div class="chat-box">
+            <input type="submit" value="Send" style="float: right" />
+            <div style="overflow: hidden; padding-right: .5em;">
+            <input type="text" style="width: 100%;" />
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

@@ -33,6 +33,10 @@
 			{
 				"command": "vs-codex.change-model-type",
 				"title": "VS Codex: Change Codex model type"
+			},
+			{
+				"command": "vs-codex.chat",
+				"title": "VS Codex: Chat with a helpful bot"
 			}
 		],
 		"keybindings": [
