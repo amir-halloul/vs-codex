@@ -4,6 +4,7 @@ import { CodexInlineCompletionItem } from "./models/codex-inline-completion-item
 import { generatePrompt } from "./utilities/prompt-utilities";
 import { CompletionType, getCodexModel, getCompletionType, setCodexModel, setCompletionType } from "./global-state-manager";
 import { predictNext } from "./openai-api";
+import { ChatController } from "./controllers/chat-controller";
 
 export function activate(extensionContext: vscode.ExtensionContext) {
 
@@ -147,11 +148,22 @@ export function activate(extensionContext: vscode.ExtensionContext) {
     }
   );
 
+  let disposableChat = vscode.commands.registerCommand(
+    "vs-codex.chat",
+    async function () {
+      let editor = vscode.window.activeTextEditor;
+      if (editor) {
+        const chatController = new ChatController(extensionContext.extensionUri, editor.document.languageId);
+      }
+    }
+  );
+
   extensionContext.subscriptions.push(disposable);
   extensionContext.subscriptions.push(disposableComplete);
   extensionContext.subscriptions.push(disposableChangeCompletionType);
   extensionContext.subscriptions.push(codexStatusBarItem);
   extensionContext.subscriptions.push(disposableChangeModelType);
+  extensionContext.subscriptions.push(disposableChat);
 
   function updateCodexStatusBarItem(): void {
     const completionType = getCompletionType(extensionContext);
