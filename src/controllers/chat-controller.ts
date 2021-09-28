@@ -81,7 +81,7 @@ export class ChatController {
         const completions = await predictNext(prompt, config, vscode.workspace.getConfiguration("general").get("openaiKey") ?? "");
         if (completions && completions.length) {
             // Add bot response to message list
-            this.addMessage(completions[0], BOT_USER_ID);
+            this.addMessage(completions[0].trim(), BOT_USER_ID);
         }
     }
 
